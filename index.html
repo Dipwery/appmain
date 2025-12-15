@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHRUVA POWER - Advanced Manager</title>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    
+    <script type="module" src="main.js"></script>
+    
+</head>
+<body>
+    
+    <div id="side-menu">
+        <div class="menu-header">
+            <h3 id="menuEmailDisplay"></h3>
+            <button class="close-btn" onclick="toggleMenu()">×</button>
+        </div>
+        
+        <div class="menu-items">
+            <button onclick="showSection('dashboard-view'); toggleMenu()">ড্যাশবোর্ড</button>
+            <button onclick="showSection('monthly-report-view'); toggleMenu()">মাসিক রিপোর্ট</button>
+            <button onclick="showSection('history-view'); toggleMenu()">লেনদেন ইতিহাস</button>
+            <button onclick="downloadPDF(); toggleMenu()">PDF ডাউনলোড</button>
+            
+            <div class="separator"></div>
+
+            <button onclick="logoutUser()" class="logout-btn">লগ-আউট</button>
+        </div>
+    </div>
+    
+    <div id="main-wrapper">
+        <header>
+            <button id="menu-icon" onclick="toggleMenu()">☰</button>
+            <h1>DHRUVA POWER</h1>
+            <p id="userEmailDisplay" style="display: none;"></p>
+        </header>
+
+        <div id="auth-view">
+            <div class="auth-box">
+                <h2 id="authTitle">লগইন</h2>
+                <input type="email" id="email" placeholder="আপনার ইমেইল দিন">
+                <input type="password" id="password" placeholder="পাসওয়ার্ড দিন (অন্তত ৬ সংখ্যা)">
+                
+                <button onclick="loginUser()" id="loginBtn">লগইন করুন</button>
+                <button onclick="registerUser()" id="regBtn" style="display:none;">নতুন অ্যাকাউন্ট খুলুন</button>
+                
+                <p id="toggleText" onclick="toggleAuthMode()">অ্যাকাউন্ট নেই? <span>নতুন খুলুন</span></p>
+                <p id="authError" style="color:red; font-size:14px;"></p>
+            </div>
+        </div>
+
+        <div id="content" style="display: none;">
+            <h2 id="currentViewTitle">ড্যাশবোর্ড</h2>
+
+            <div id="dashboard-view">
+                <div id="settings" class="settings-box">
+                    <h4>দৈনিক বেতন হার (Daily Rate)</h4>
+                    <input type="number" id="dailyRateInput" placeholder="টাকার পরিমাণ">
+                    <button onclick="updateDailyRate()" id="rateSaveBtn">সেভ করুন</button>
+                </div>
+                
+                <div id="finance-section">
+                    <div class="card income">
+                        <h4>মোট আয় (সকল সময়ের)</h4>
+                        <h2 id="totalIncome">৳ 0</h2>
+                    </div>
+                    <div class="card expense">
+                        <h4>মোট তোলা হয়েছে (সকল সময়ের)</h4>
+                        <h2 id="totalWithdraw">৳ 0</h2>
+                    </div>
+                    <div class="card balance">
+                        <h4>বর্তমান ব্যালেন্স</h4>
+                        <h2 id="currentBalance">৳ 0</h2>
+                    </div>
+                </div>
+
+                <h6 id="lastDateMsg">শেষ এন্ট্রি: <span id="lastDate">--/--/----</span></h6>
+
+                <div id="buttons">
+                    <h4>আজকে কি আপনি কাজে গিয়েছেন? (দৈনিক হার: <span id="displayDailyRate">৳ 400</span>)</h4>
+                    <button id="presentBtn" onclick="markAttendance('Present')">হ্যাঁ (উপস্থিত)</button>
+                    <button id="absentBtn" onclick="markAttendance('Absent')">না (অনুপস্থিত)</button>
+                </div>
+
+                <div class="withdraw-box past-data-box">
+                    <h4>📅 অতীত তারিখের ডেটা এন্ট্রি</h4>
+                    <p>অ্যাপ শুরু করার আগের তথ্য সেভ করুন।</p>
+                    <input type="date" id="pastDateInput" style="width: 100%;">
+                    
+                    <button onclick="markPastAttendance('Present')">উপস্থিতি দিন</button>
+                    <button onclick="markPastAttendance('Absent')">অনুপস্থিতি দিন</button>
+                </div>
+
+                <div class="withdraw-box">
+                    <h4>টাকা তুলতে চান?</h4>
+                    <input type="number" id="withdrawAmount" placeholder="পরিমাণ (টাকা)">
+                    <input type="text" id="withdrawReason" placeholder="কারণ">
+                    <button onclick="withdrawMoney()" class="w-btn">টাকা তুলুন</button>
+                </div>
+            </div>
+
+            <div id="monthly-report-view" style="display: none;">
+                <div class="monthly-nav">
+                    <button onclick="changeMonth(-1)">← পূর্ববর্তী মাস</button>
+                    <h3 id="currentMonthYear">ডিসেম্বর ২০২৫</h3>
+                    <button onclick="changeMonth(1)">পরবর্তী মাস →</button>
+                </div>
+                
+                <div id="day">
+                    <div class="stat-box">
+                        <h4>মাসিক উপস্থিতি</h4>
+                        <h2 id="monthlyPresent">00</h2>
+                    </div>
+                    <div class="stat-box">
+                        <h4>মাসিক অনুপস্থিতি</h4>
+                        <h2 id="monthlyAbsent">00</h2>
+                    </div>
+                    <div class="stat-box">
+                        <h4>মোট মাসিক আয়</h4>
+                        <h2 id="monthlyIncome">৳ 0</h2>
+                    </div>
+                </div>
+
+                <h3>উপস্থিতির ক্যালেন্ডার</h3>
+                <div class="calendar-grid-wrapper">
+                    <div class="calendar-grid">
+                        <div class="calendar-header">রবি</div>
+                        <div class="calendar-header">সোম</div>
+                        <div class="calendar-header">মঙ্গল</div>
+                        <div class="calendar-header">বুধ</div>
+                        <div class="calendar-header">বৃহঃ</div>
+                        <div class="calendar-header">শুক্র</div>
+                        <div class="calendar-header">শনি</div>
+                    </div>
+                    <div id="calendarDays" class="calendar-grid">
+                        </div>
+                </div>
+            </div>
+
+            <div id="history-view" style="display: none;">
+                <h3>লেনদেন বিবরণী (Statement)</h3>
+                <p>এই তালিকাটি কেবল নির্বাচিত মাসের লেনদেন দেখাচ্ছে।</p>
+                <div id="statement-area">
+                    <table id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>তারিখ</th>
+                                <th>বিবরণ</th>
+                                <th>অবস্থা</th>
+                                <th>টাকা</th>
+                                <th>ব্যালেন্স</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="overlay" onclick="toggleMenu()"></div>
+
+</body>
+</html>

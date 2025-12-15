@@ -1,0 +1,405 @@
+/* ১. গ্লোবাল এবং ফন্ট সেটিংস */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5; 
+    margin: 0;
+    padding: 0;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* --- নতুন: সাইড মেনু স্টাইল --- */
+#side-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px; /* মেনুর প্রস্থ */
+    height: 100%;
+    background-color: #343a40; /* ডার্ক ব্যাকগ্রাউন্ড */
+    color: white;
+    transform: translateX(-100%); /* ডিফল্ট অবস্থায় স্ক্রিনের বাইরে থাকবে */
+    transition: transform 0.3s ease-in-out;
+    z-index: 2000;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-header {
+    padding: 15px;
+    background-color: #007bff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.menu-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    width: auto;
+    padding: 0;
+    margin: 0;
+}
+.menu-items {
+    flex-grow: 1;
+    padding: 10px 0;
+}
+#side-menu button {
+    width: 100%;
+    text-align: left;
+    padding: 15px 20px;
+    background-color: transparent !important;
+    color: white;
+    border: none;
+    border-radius: 0;
+    transition: background-color 0.2s;
+    font-size: 16px;
+    margin-top: 0;
+}
+#side-menu button:hover {
+    background-color: #495057 !important;
+}
+.logout-btn {
+    background-color: #dc3545 !important;
+    margin-top: 20px !important;
+}
+.logout-btn:hover {
+    background-color: #c82333 !important;
+}
+.separator {
+    height: 1px;
+    background-color: #495057;
+    margin: 10px 0;
+}
+
+/* মেনু খোলার সময় মূল কন্টেন্টের উপর শ্যাডো */
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1999;
+    display: none; /* ডিফল্ট অবস্থায় লুকানো */
+}
+
+/* --- মূল কন্টেন্ট রেপার --- */
+#main-wrapper {
+    width: 100%;
+    max-width: 450px; 
+    background-color: #ffffff;
+    min-height: 100vh;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+}
+
+
+/* ২. হেডার এবং মেনু আইকন */
+header {
+    background-color: #007bff; 
+    color: white;
+    padding: 15px 20px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#menu-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none !important;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    width: auto;
+    padding: 0;
+    margin: 0;
+    z-index: 11;
+}
+header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+/* লগইন অবস্থায় সাইড মেনু ব্যবহারের জন্য মূল কন্টেন্টেরPadding বাড়ানো হয়েছে */
+#content {
+    padding: 20px;
+    padding-top: 0;
+}
+
+
+/* ৩. অথেনটিকেশন বক্স স্টাইল */
+.auth-box {
+    padding: 40px 20px;
+    text-align: center;
+}
+.auth-box h2 {
+    color: #343a40;
+    margin-bottom: 30px;
+}
+input {
+    width: calc(100% - 20px);
+    padding: 12px 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: #ffffff;
+}
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background-color: #28a745; 
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: 600;
+}
+button:hover {
+    background-color: #218838;
+}
+#regBtn {
+    background-color: #007bff !important; 
+}
+#toggleText {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #6c757d;
+    cursor: pointer;
+}
+#toggleText span {
+    color: #007bff;
+    font-weight: bold;
+}
+
+/* ৪. ড্যাশবোর্ড স্টাইল */
+#currentViewTitle {
+    color: #343a40;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+/* ফিন্যান্স কার্ডস */
+#finance-section {
+    display: flex;
+    flex-direction: column; 
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.card {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
+}
+.card h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #6c757d;
+}
+.card h2 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+}
+.income h2 { color: #28a745; }
+.expense h2 { color: #dc3545; }
+.balance h2 { color: #007bff; }
+
+/* হাজিরা এবং টাকা তোলার বক্স */
+#lastDateMsg {
+    text-align: center;
+    font-size: 14px;
+    color: #6c757d;
+    margin: 15px 0;
+}
+#buttons h4 {
+    font-size: 16px;
+    color: #343a40;
+    margin-bottom: 15px;
+    text-align: center;
+}
+#buttons button {
+    display: inline-block;
+    width: 48%;
+    margin: 5px 1%;
+    padding: 15px;
+    font-weight: bold;
+}
+#presentBtn { background-color: #28a745; }
+#absentBtn { background-color: #ffc107; color: #333; } 
+
+/* সেটিং বক্স */
+.settings-box {
+    margin-bottom: 20px; 
+    text-align: left; 
+    padding: 15px; 
+    border: 1px solid #ced4da; 
+    border-radius: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+}
+.settings-box h4 {
+    width: 100%;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+#dailyRateInput { 
+    width: 150px; 
+    margin-bottom: 0;
+}
+#rateSaveBtn { 
+    width: auto;
+    padding: 10px 15px;
+    background-color: #17a2b8;
+    margin-left: 10px;
+}
+
+/* উইথড্র/ডেটা বক্স */
+.withdraw-box {
+    margin-top: 30px;
+    padding: 20px;
+    border: 1px solid #ced4da;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+}
+.past-data-box {
+    border-color: #007bff;
+}
+.withdraw-box h4 {
+    margin-top: 0;
+    color: #343a40;
+}
+.withdraw-box .w-btn {
+    background-color: #343a40;
+}
+.withdraw-box input {
+    margin-bottom: 10px;
+}
+.withdraw-box button {
+    width: 48%;
+    margin: 5px 1%;
+    padding: 10px;
+    font-size: 14px;
+}
+.past-data-box button:nth-child(3) { background-color: #28a745; }
+.past-data-box button:nth-child(4) { background-color: #dc3545; }
+
+
+/* ৫. মাসিক রিপোর্ট এবং ক্যালেন্ডার স্টাইল */
+.monthly-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.monthly-nav button {
+    width: auto;
+    padding: 8px 10px;
+    font-size: 14px;
+    background: #6c757d;
+}
+.monthly-nav h3 {
+    display: inline-block;
+    margin: 0 10px;
+    font-size: 18px;
+    color: #007bff;
+}
+
+#day {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 20px 0;
+}
+.stat-box {
+    flex: 1;
+    background: #e9ecef;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.stat-box h4 { font-size: 12px; margin: 0 0 5px 0; color: #6c757d; }
+.stat-box h2 { 
+    font-size: 18px; 
+    margin: 0; 
+    font-weight: 700;
+    color: #007bff; 
+}
+
+/* ক্যালেন্ডার গ্রিড */
+.calendar-grid-wrapper {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: #dee2e6; 
+}
+.calendar-header {
+    background-color: #343a40;
+    color: white;
+    padding: 8px 0;
+    font-weight: bold;
+    font-size: 12px !important;
+    text-align: center;
+}
+.calendar-day {
+    padding: 10px;
+    min-height: 50px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #ffffff;
+    font-size: 14px;
+}
+.day-date { font-weight: bold; margin-bottom: 5px; }
+.day-status { font-size: 10px; font-weight: 600; }
+
+.present { background-color: #d4edda !important; color: #155724 !important; }
+.absent { background-color: #f8d7da !important; color: #721c24 !important; }
+.today { border: 2px solid #007bff; }
+.empty-day { background-color: #f4f4f4; visibility: hidden; }
+
+/* ৬. ইতিহাস টেবিল স্টাইল */
+#historyTable th {
+    background-color: #e9ecef;
+}
+.credit { color: #28a745; }
+.debit { color: #dc3545; }
+
+/* ৭. ফিক্সড ফুটার মেনু বাতিল */
+#main-nav { 
+    display: none !important; 
+}

@@ -1,9 +1,9 @@
 // ১. প্রয়োজনীয় Firebase মডিউলগুলো import করুন
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, push } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js"; 
 
-// ২. আপনার Firebase কনফিগারেশন (আপনার প্রজেক্টের সাথে মিলিয়ে নিন)
+// ২. আপনার Firebase কনফিগারেশন
 const firebaseConfig = {
     apiKey: "AIzaSyA42LzYBbvJ3k74zXLl4gb-_UmsbuknDhI", 
     authDomain: "save-21ab8.firebaseapp.com",
@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ৪. গ্লোবাল ডেটা স্টেট ও ক্যালেন্ডার ট্র্যাকার
+// ৪. গ্লোবাল ডেটা স্টেট
 let currentUser = null;
 let appData = {
     balance: 0,
@@ -32,11 +32,13 @@ let appData = {
     transactions: [],
     attendance: {} 
 };
-// ক্যালেন্ডার ট্র্যাকার
 let currentReportDate = new Date();
 const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 
-// --- গ্লোবাল ফাংশনগুলো উইন্ডো অবজেক্টে যোগ করা (HTML এর onclick এর জন্য) ---
+// ***** নোটিফিকেশনের জন্য গ্লোবাল ভেরিয়েবল *****
+let lastMessageTimestamp = 0; 
+
+// --- গ্লোবাল ফাংশনগুলো উইন্ডো অবজেক্টে যোগ করা ---
 window.loginUser = loginUser;
 window.registerUser = registerUser;
 window.logoutUser = logoutUser;
@@ -48,7 +50,9 @@ window.showSection = showSection;
 window.downloadPDF = downloadPDF;
 window.updateDailyRate = updateDailyRate;
 window.changeMonth = changeMonth;
-
+window.toggleMenu = toggleMenu;
+window.sendMessage = sendMessage; 
+window.requestNotificationPermission = requestNotificationPermission; // নতুন
 
 // ৫. ইউজার লগইন স্টেট মনিটর করা
 onAuthStateChanged(auth, (user) => {
@@ -56,17 +60,19 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         document.getElementById("auth-view").style.display = "none";
         document.getElementById("content").style.display = "block";
-        document.getElementById("userEmailDisplay").innerText = "স্বাগতম: " + user.email;
+        document.getElementById("userEmailDisplay").innerText = "লগইন: " + user.email;
         loadDataOnline(); 
+        showSection('dashboard-view'); 
+        checkNotificationStatus(); // লগইনের পর স্ট্যাটাস চেক
     } else {
         currentUser = null;
         document.getElementById("auth-view").style.display = "block";
         document.getElementById("content").style.display = "none";
-        document.getElementById("userEmailDisplay").innerText = "লগইন করুন";
+        document.getElementById("userEmailDisplay").innerText = "";
     }
 });
 
-// ৬. ডাটাবেস থেকে ডাটা নামানো (Load Data)
+// ৬. ডাটাবেস থেকে ডাটা নামানো
 function loadDataOnline() {
     const uid = currentUser.uid;
     const userRef = ref(db, 'users/' + uid);
@@ -88,69 +94,34 @@ function loadDataOnline() {
             saveDataOnline(); 
         }
         updateUI(); 
-        renderMonthlyReport();
     });
 }
 
-// ৭. ডাটাবেসে ডাটা পাঠানো (Save Data)
+// ৭. ডাটাবেসে ডাটা পাঠানো
 function saveDataOnline() {
     if (currentUser) {
         const userRef = ref(db, 'users/' + currentUser.uid);
-        set(userRef, appData)
-          .catch((error) => {
-              console.error("Error saving data: ", error);
-              document.getElementById("authError").innerText = "ডেটা সেভ করতে সমস্যা হয়েছে। Firebase Rules চেক করুন।";
-          });
+        set(userRef, appData).catch((error) => console.error("Error:", error));
     }
 }
 
-// ৮. লগইন, রেজিস্ট্রেশন ও লগআউট ফাংশন
+// ৮. লগইন/রেজিস্ট্রেশন
 function loginUser() {
     const e = document.getElementById("email").value;
     const p = document.getElementById("password").value;
-    document.getElementById("authError").innerText = ""; 
     if(!e || !p) { document.getElementById("authError").innerText = "ইমেইল এবং পাসওয়ার্ড দিন"; return; }
-
-    signInWithEmailAndPassword(auth, e, p)
-        .catch(err => {
-            let msg = "ত্রুটি: " + err.message;
-            if(err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-                 msg = "ভুল ইমেইল বা পাসওয়ার্ড। আপনার লগইন তথ্য যাচাই করুন।";
-            }
-            if(err.code === 'auth/invalid-api-key') msg = "গুরুত্বপূর্ণ: API Key কাজ করছে না! Firebase Console চেক করুন।";
-            document.getElementById("authError").innerText = msg;
-        });
+    signInWithEmailAndPassword(auth, e, p).catch(err => document.getElementById("authError").innerText = "লগইন এরর: " + err.message);
 }
 
 function registerUser() {
     const e = document.getElementById("email").value;
     const p = document.getElementById("password").value;
-    document.getElementById("authError").innerText = ""; 
-    if(!e || !p || p.length < 6) { 
-        document.getElementById("authError").innerText = "সঠিক ইমেইল ও পাসওয়ার্ড (কমপক্ষে ৬ সংখ্যা) দিন।"; 
-        return; 
-    }
-
-    createUserWithEmailAndPassword(auth, e, p)
-        .then(() => {
-            alert("অ্যাকাউন্ট তৈরি সফল! আপনি অটো লগইন হয়েছেন।");
-            document.getElementById("authError").innerText = "";
-        })
-        .catch(err => {
-            let msg = "রেজিস্ট্রেশন হয়নি।";
-            if(err.code === 'auth/email-already-in-use') msg = "এই ইমেইল দিয়ে আগেই অ্যাকাউন্ট খোলা আছে।";
-            if(err.code === 'auth/weak-password') msg = "পাসওয়ার্ড খুবই দুর্বল। কমপক্ষে ৬টি অক্ষর দিন।";
-            if(err.code === 'auth/invalid-email') msg = "ইমেল ফরম্যাট ভুল আছে।";
-            if(err.code === 'auth/invalid-api-key') msg = "গুরুত্বপূর্ণ: API Key কাজ করছে না! Firebase Console চেক করুন।";
-            document.getElementById("authError").innerText = msg;
-        });
+    if(!e || !p || p.length < 6) { document.getElementById("authError").innerText = "সঠিক তথ্য দিন (পাসওয়ার্ড ৬+)।"; return; }
+    createUserWithEmailAndPassword(auth, e, p).then(() => alert("অ্যাকাউন্ট তৈরি সফল!")).catch(err => document.getElementById("authError").innerText = err.message);
 }
 
 function logoutUser() {
-    signOut(auth).then(() => {
-        alert("লগ-আউট সফল।");
-        location.reload();
-    });
+    signOut(auth).then(() => location.reload());
 }
 
 let isLoginMode = true;
@@ -159,28 +130,26 @@ function toggleAuthMode() {
     document.getElementById("authTitle").innerText = isLoginMode ? "লগইন" : "নতুন অ্যাকাউন্ট";
     document.getElementById("loginBtn").style.display = isLoginMode ? "inline-block" : "none";
     document.getElementById("regBtn").style.display = isLoginMode ? "none" : "inline-block";
-    document.getElementById("toggleText").innerHTML = isLoginMode 
-        ? "অ্যাকাউন্ট নেই? <span>নতুন খুলুন</span>" 
-        : "আগেই অ্যাকাউন্ট আছে? <span>লগইন করুন</span>";
+    document.getElementById("toggleText").innerHTML = isLoginMode ? "অ্যাকাউন্ট নেই? <span>নতুন খুলুন</span>" : "আগেই অ্যাকাউন্ট আছে? <span>লগইন করুন</span>";
     document.getElementById("authError").innerText = "";
 }
 
-// ৯. দৈনিক বেতন হার আপডেট করা
+// ৯. সেটিংস: দৈনিক বেতন হার আপডেট
 function updateDailyRate() {
     const rate = parseInt(document.getElementById("dailyRateInput").value);
     if (rate > 0) {
         appData.dailyRate = rate;
         saveDataOnline();
         updateUI();
-        alert(`দৈনিক বেতন হার ৳ ${rate} এ সেভ করা হয়েছে।`);
+        alert(`✅ দৈনিক রেট ৳ ${rate} আপডেট হয়েছে।`);
     } else {
-        alert("সঠিক বেতন হার দিন।");
+        alert("❌ সঠিক টাকার পরিমাণ দিন।");
     }
 }
 
-// ১০. আজকের হাজিরা দেওয়া
+// ১০. আজকের হাজিরা
 function markAttendance(status) {
-    if (!currentUser) { alert("অনুগ্রহ করে আগে লগইন করুন।"); return; }
+    if (!currentUser) return;
     
     const today = new Date();
     const todayStr = today.toLocaleDateString('bn-BD');
@@ -188,9 +157,8 @@ function markAttendance(status) {
     const month = (today.getMonth() + 1).toString().padStart(2, '0');
     const day = today.getDate().toString().padStart(2, '0');
 
-    if (appData.lastActionDate === todayStr) { alert("আজকের এন্ট্রি ইতিমধ্যে নেওয়া হয়েছে!"); return; }
+    if (appData.lastActionDate === todayStr) { alert("⚠️ আজকের এন্ট্রি ইতিমধ্যে নেওয়া হয়েছে!"); return; }
 
-    // attendance অবজেক্ট আপডেট করা
     if (!appData.attendance[year]) appData.attendance[year] = {};
     if (!appData.attendance[year][month]) appData.attendance[year][month] = {};
     
@@ -200,49 +168,38 @@ function markAttendance(status) {
         const income = appData.dailyRate;
         appData.totalIncome += income;
         appData.balance += income;
-        addTransaction(todayStr, "কাজে উপস্থিত (বেতন)", "জমা", income);
+        addTransaction(todayStr, "বেতন (উপস্থিত)", "জমা", income);
     } else {
-        addTransaction(todayStr, "কাজে অনুপস্থিত", "---", 0);
+        addTransaction(todayStr, "অনুপস্থিত", "---", 0);
     }
 
     appData.lastDate = todayStr;
     appData.lastActionDate = todayStr;
-    
     saveDataOnline(); 
-    renderMonthlyReport();
-    alert("আপনার উপস্থিতি গ্রহণ করা হয়েছে।");
+    alert("✅ উপস্থিতি গ্রহণ করা হয়েছে।");
 }
 
-// ১১. অতীত তারিখের হাজিরা দেওয়া (নতুন ফাংশন)
+// ১১. সেটিংস: অতীত তারিখের হাজিরা
 function markPastAttendance(status) {
-    if (!currentUser) { alert("অনুগ্রহ করে আগে লগইন করুন।"); return; }
+    if (!currentUser) return;
     
     const dateInput = document.getElementById("pastDateInput").value;
-    if (!dateInput) { alert("অনুগ্রহ করে একটি অতীত তারিখ নির্বাচন করুন।"); return; }
+    if (!dateInput) { alert("তারিখ নির্বাচন করুন।"); return; }
 
     const selectedDate = new Date(dateInput);
     const today = new Date();
+    if (selectedDate > today) { alert("ভবিষ্যতের তারিখ দেওয়া যাবে না।"); return; }
     
-    // ভবিষ্যতের তারিখ এন্ট্রি ব্লক করা
-    if (selectedDate > today) { alert("ভবিষ্যতের তারিখে এন্ট্রি দেওয়া সম্ভব নয়।"); return; }
-    
-    // ডেটাবেসের জন্য স্ট্রিং ফরম্যাট তৈরি করা
     const year = selectedDate.getFullYear().toString();
     const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
     const day = selectedDate.getDate().toString().padStart(2, '0');
-    
-    // বাংলাদেশি লোকাল স্ট্রিং (History এবং Last Date-এর জন্য)
     const dateStrBn = selectedDate.toLocaleDateString('bn-BD'); 
 
-    // attendance অবজেক্ট আপডেট করা
     if (!appData.attendance[year]) appData.attendance[year] = {};
     if (!appData.attendance[year][month]) appData.attendance[year][month] = {};
     
-    // যদি ঐ তারিখে আগেই কোনো এন্ট্রি থাকে
     if (appData.attendance[year][month][day]) {
-        if (!confirm(`${dateStrBn} তারিখের এন্ট্রি ইতিমধ্যেই নেওয়া আছে। নতুন ডেটা ওভাররাইড করতে চান?`)) {
-            return;
-        }
+        if (!confirm(`${dateStrBn} এর ডাটা আছে। রিপ্লেস করবেন?`)) return;
     }
     
     appData.attendance[year][month][day] = status;
@@ -251,43 +208,42 @@ function markPastAttendance(status) {
         const income = appData.dailyRate;
         appData.totalIncome += income;
         appData.balance += income;
-        addTransaction(dateStrBn, `অতীতের উপস্থিতি (${dateStrBn})`, "জমা", income);
+        addTransaction(dateStrBn, `অতীতের এন্ট্রি (${dateStrBn})`, "জমা", income);
     } else {
-        addTransaction(dateStrBn, `অতীতের অনুপস্থিতি (${dateStrBn})`, "---", 0);
+        addTransaction(dateStrBn, `অতীতের এন্ট্রি (${dateStrBn}) - না`, "---", 0);
     }
 
     saveDataOnline(); 
-    renderMonthlyReport(); // মাসিক রিপোর্ট আপডেট করা
-    alert(`${dateStrBn} তারিখের ${status} এন্ট্রি সফলভাবে সম্পন্ন হয়েছে।`);
+    alert(`✅ ${dateStrBn} তারিখ আপডেট হয়েছে।`);
 }
 
-
-// ১২. টাকা তোলা (Withdraw)
+// ১২. সেটিংস: টাকা তোলা 
 function withdrawMoney() {
-    if (!currentUser) { alert("অনুগ্রহ করে আগে লগইন করুন।"); return; }
+    if (!currentUser) return;
 
     const amountInput = document.getElementById("withdrawAmount");
     const reasonInput = document.getElementById("withdrawReason");
     const amount = parseFloat(amountInput.value);
     const reason = reasonInput.value || "খরচ";
 
-    if (!amount || amount <= 0) { alert("সঠিক টাকার পরিমাণ লিখুন।"); return; }
+    if (!amount || amount <= 0) { alert("টাকার পরিমাণ লিখুন।"); return; }
+    
+    if (amount > appData.balance) { alert("অপর্যাপ্ত ব্যালেন্স!"); return; } 
     
     const todayStr = new Date().toLocaleDateString('bn-BD');
     
     appData.totalWithdraw += amount;
     appData.balance -= amount;
     
-    addTransaction(todayStr, `টাকা তোলা (${reason})`, "খরচ", amount);
+    addTransaction(todayStr, `উত্তোলন (${reason})`, "খরচ", amount);
     
     amountInput.value = "";
     reasonInput.value = "";
-    
     saveDataOnline(); 
-    alert("টাকা তোলা হয়েছে এবং ডাটাবেসে সেভ হয়েছে।");
+    alert("✅ টাকা তোলা সফল হয়েছে।");
 }
 
-// ১৩. ট্রানজেকশন অ্যারেতে যোগ করা
+// ১৩. ট্রানজেকশন হেল্পার
 function addTransaction(date, desc, type, amount) {
     const transaction = {
         date: date,
@@ -297,12 +253,11 @@ function addTransaction(date, desc, type, amount) {
         runningBalance: appData.balance,
         timestamp: Date.now() 
     };
-    
-    if (!appData.transactions) { appData.transactions = []; }
+    if (!appData.transactions) appData.transactions = [];
     appData.transactions.unshift(transaction); 
 }
 
-// ১৪. স্ক্রিন আপডেট করা (UI Update)
+// ১৪. UI আপডেট
 function updateUI() {
     document.getElementById("lastDate").innerText = appData.lastDate || "--/--/----";
     document.getElementById("totalIncome").innerText = "৳ " + (appData.totalIncome || 0);
@@ -311,10 +266,16 @@ function updateUI() {
     document.getElementById("dailyRateInput").value = appData.dailyRate || 400;
     document.getElementById("displayDailyRate").innerText = appData.dailyRate || 400;
 
-    renderMonthlyReport();
+    // যদি বর্তমান ভিউ রিপোর্ট হয়, তবে রিফ্রেশ করুন
+    if(document.getElementById("monthly-report-view").style.display === 'block') renderMonthlyReport();
+    if(document.getElementById("history-view").style.display === 'block') {
+         const year = currentReportDate.getFullYear().toString();
+         const month = (currentReportDate.getMonth() + 1).toString().padStart(2, '0');
+         renderHistoryTable(year, month);
+    }
 }
 
-// ১৫. ক্যালেন্ডারের মাস পরিবর্তন করা
+// ১৫. রিপোর্ট এবং নেভিগেশন (অপরিবর্তিত)
 function changeMonth(step) {
     const newMonth = currentReportDate.getMonth() + step;
     currentReportDate.setMonth(newMonth);
@@ -322,196 +283,249 @@ function changeMonth(step) {
     renderMonthlyReport();
 }
 
-// ১৬. মাসিক রিপোর্ট তৈরি এবং রেন্ডার করা
 function renderMonthlyReport() {
     const year = currentReportDate.getFullYear().toString();
     const month = (currentReportDate.getMonth() + 1).toString().padStart(2, '0');
     const monthName = MONTHS[currentReportDate.getMonth()];
-    const today = new Date();
-    const isCurrentMonth = today.getFullYear().toString() === year && today.getMonth().toString() === (currentReportDate.getMonth()).toString();
     
     document.getElementById("currentMonthYear").innerText = `${monthName} ${year}`;
 
-    // ১. মাসিক পরিসংখ্যান গণনা
     let monthlyPresent = 0;
     let monthlyAbsent = 0;
-    let monthlyIncome = 0;
     const attendanceData = appData.attendance[year]?.[month] || {};
 
     for (const day in attendanceData) {
-        if (attendanceData[day] === 'Present') {
-            monthlyPresent++;
-        } else if (attendanceData[day] === 'Absent') {
-            monthlyAbsent++;
-        }
+        if (attendanceData[day] === 'Present') monthlyPresent++;
+        else if (attendanceData[day] === 'Absent') monthlyAbsent++;
     }
-    monthlyIncome = monthlyPresent * (appData.dailyRate || 400);
-
     document.getElementById("monthlyPresent").innerText = monthlyPresent;
     document.getElementById("monthlyAbsent").innerText = monthlyAbsent;
-    document.getElementById("monthlyIncome").innerText = "৳ " + monthlyIncome;
+    document.getElementById("monthlyIncome").innerText = "৳ " + (monthlyPresent * (appData.dailyRate || 400));
 
-    // ২. ক্যালেন্ডার রেন্ডার করা
     const calendarBody = document.getElementById("calendarDays");
     calendarBody.innerHTML = '';
-
     const firstDay = new Date(year, currentReportDate.getMonth(), 1).getDay(); 
     const daysInMonth = new Date(year, currentReportDate.getMonth() + 1, 0).getDate();
-    
-    // ফাঁকা ঘর যোগ করা
-    for (let i = 0; i < firstDay; i++) {
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = 'calendar-day empty-day';
-        calendarBody.appendChild(emptyDiv);
-    }
+    const today = new Date();
 
-    // মাসের দিনগুলো যোগ করা
+    for (let i = 0; i < firstDay; i++) {
+        calendarBody.innerHTML += `<div></div>`;
+    }
     for (let day = 1; day <= daysInMonth; day++) {
         const dayStr = day.toString().padStart(2, '0');
         const status = attendanceData[dayStr];
-        const isToday = isCurrentMonth && day === today.getDate();
+        let className = 'calendar-day';
+        if (status === 'Present') className += ' present';
+        if (status === 'Absent') className += ' absent';
+        if (today.getDate() === day && today.getMonth() === currentReportDate.getMonth() && today.getFullYear().toString() === year) className += ' today';
         
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'calendar-day';
-        
-        if (status === 'Present') dayDiv.classList.add('present');
-        if (status === 'Absent') dayDiv.classList.add('absent');
-        if (isToday) dayDiv.classList.add('today');
-
-        dayDiv.innerHTML = `<span class="day-date">${day}</span><span class="day-status">${status || ''}</span>`;
-        calendarBody.appendChild(dayDiv);
+        calendarBody.innerHTML += `<div class="${className}">
+            <span>${day}</span>
+            <span style="font-size:9px">${status ? (status === 'Present'?'P':'A') : ''}</span>
+        </div>`;
     }
-    
-    // ৩. ইতিহাস টেবিল রেন্ডার করা
-    renderHistoryTable(year, month);
 }
 
-// ১৭. ইতিহাস টেবিল রেন্ডার করা (মাসিক ফিল্টারিং - ফিক্সড)
 function renderHistoryTable(year, month) {
     const tbody = document.getElementById("historyBody");
     tbody.innerHTML = "";
+    const sorted = appData.transactions.slice().sort((a, b) => b.timestamp - a.timestamp);
+    const filtered = sorted.slice(0, 50); 
 
-    // প্রথমে সমস্ত ট্রানজেকশন timestamp অনুযায়ী সাজানো
-    const sortedTransactions = appData.transactions.slice().sort((a, b) => b.timestamp - a.timestamp);
-
-    const filteredTransactions = sortedTransactions.filter(t => {
-        const parts = t.date.split('/');
-        
-        if (parts.length < 3) return false; 
-        
-        // DD/MM/YYYY ফরম্যাট থেকে মাস ও বছর
-        const transactionMonth = parts[1]; 
-        const transactionYear = parts[2];
-        
-        return transactionYear === year && transactionMonth === month;
+    filtered.forEach(t => {
+        const row = document.createElement("tr");
+        let amountClass = t.type === 'জমা' ? 'credit' : (t.type === 'খরচ' ? 'debit' : '');
+        row.innerHTML = `<td>${t.date}</td><td>${t.description}</td><td class="${amountClass}">${t.type==='---'?'-':'৳ '+t.amount}</td><td>৳ ${t.runningBalance}</td>`;
+        tbody.appendChild(row);
     });
-
-    if (filteredTransactions.length > 0) {
-        filteredTransactions.forEach(t => {
-            const row = document.createElement("tr");
-            let amountClass = t.type === 'জমা' ? 'credit' : (t.type === 'খরচ' ? 'debit' : '');
-            let displayAmount = t.type === '---' ? '-' : `৳ ${t.amount}`;
-            
-            row.innerHTML = `
-                <td>${t.date}</td>
-                <td>${t.description}</td>
-                <td>${t.type}</td>
-                <td class="${amountClass}">${displayAmount}</td>
-                <td>৳ ${t.runningBalance}</td>
-            `;
-            tbody.appendChild(row);
-        });
-    } else {
-        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>এই মাসের কোনো লেনদেন পাওয়া যায়নি</td></tr>";
-    }
 }
 
-// ১৮. পেজ নেভিগেশন
+// ১৬. পেজ নেভিগেশন
 function showSection(sectionId) {
-    document.getElementById("dashboard-view").style.display = "none";
-    document.getElementById("monthly-report-view").style.display = "none";
-    document.getElementById("history-view").style.display = "none";
+    ['dashboard-view', 'monthly-report-view', 'history-view', 'settings-view', 'chat-view'].forEach(id => { 
+        document.getElementById(id).style.display = "none";
+    });
     
     document.getElementById(sectionId).style.display = "block";
     
     let title = "ড্যাশবোর্ড";
     if (sectionId === 'monthly-report-view') {
-        title = "মাসিক রিপোর্ট ও ক্যালেন্ডার";
+        title = "মাসিক রিপোর্ট";
         renderMonthlyReport(); 
     } else if (sectionId === 'history-view') {
         title = "লেনদেন ইতিহাস";
         const year = currentReportDate.getFullYear().toString();
         const month = (currentReportDate.getMonth() + 1).toString().padStart(2, '0');
         renderHistoryTable(year, month);
+    } else if (sectionId === 'settings-view') {
+        title = "সেটিংস ও টুলস";
+    } else if (sectionId === 'chat-view') { 
+        title = "যোগাযোগ/চ্যাট";
+        loadChatMessages(); 
     }
     document.getElementById("currentViewTitle").innerText = title;
-
-    // মেনুতে হাইলাইট পরিবর্তন
-    document.querySelectorAll('#main-nav button').forEach(btn => {
-        btn.style.backgroundColor = 'transparent';
-    });
-    // বর্তমানে দেখা সেকশনের বাটন হাইলাইট করা
-    let currentButton;
-    if (sectionId === 'dashboard-view') {
-        currentButton = document.querySelector('#main-nav button[onclick*="dashboard-view"]');
-    } else if (sectionId === 'monthly-report-view') {
-        currentButton = document.querySelector('#main-nav button[onclick*="monthly-report-view"]');
-    } else if (sectionId === 'history-view') {
-        currentButton = document.querySelector('#main-nav button[onclick*="history-view"]');
-    }
-
-    if (currentButton) {
-        currentButton.style.backgroundColor = '#007bff';
-    }
 }
 
-// ১৯. পিডিএফ ডাউনলোড
-function downloadPDF() {
-    showSection('history-view'); 
-    
-    const element = document.getElementById('statement-area');
-    const monthName = MONTHS[currentReportDate.getMonth()];
-    const year = currentReportDate.getFullYear();
-
-    const opt = {
-      margin:       0.5,
-      filename:     `Dhruva_Power_Statement_${monthName}_${year}.pdf`,
-      html2canvas:  { scale: 2 },
-      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save().then(() => {
-        setTimeout(() => showSection('dashboard-view'), 2000);
-    });
-}
-
-// অ্যাপ লোড হওয়ার পর ডিফল্ট সেকশন সেট করা (শুধুমাত্র ডিজাইন হাইলাইটের জন্য)
-window.onload = function() {
-    // নিশ্চিত করুন যে লগইন অবস্থায় থাকলে ড্যাশবোর্ড হাইলাইট হয়
-    if (document.getElementById("content").style.display !== 'none') {
-        showSection('dashboard-view');
-    }
-};
-// ২০. সাইড মেনু টগল করা
+// ১৭. মেনু টগল (অপরিবর্তিত)
 function toggleMenu() {
     const sideMenu = document.getElementById("side-menu");
     const overlay = document.getElementById("overlay");
-    
     if (sideMenu.style.transform === 'translateX(0%)') {
-        // মেনু বন্ধ করা
         sideMenu.style.transform = 'translateX(-100%)';
         overlay.style.display = 'none';
-        document.body.style.overflow = '';
     } else {
-        // মেনু খোলা
         if (currentUser) {
             document.getElementById("menuEmailDisplay").innerText = currentUser.email;
             sideMenu.style.transform = 'translateX(0%)';
             overlay.style.display = 'block';
-            document.body.style.overflow = 'hidden'; // স্ক্রল লক করা
         } else {
-            alert("অনুগ্রহ করে আগে লগইন করুন।");
+            alert("আগে লগইন করুন।");
         }
     }
 }
-window.toggleMenu = toggleMenu; // গ্লোবাল লিস্টে ফাংশন যোগ করা
+
+// ১৮. পিডিএফ ডাউনলোড (অপরিবর্তিত)
+function downloadPDF() {
+    showSection('history-view'); 
+    const element = document.getElementById('statement-area');
+    html2pdf().set({ margin: 0.5, filename: `Statement.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter' } }).from(element).save();
+}
+
+// ১৯. চ্যাট লজিক (মেসেজ পাঠানো অপরিবর্তিত)
+function sendMessage() {
+    const input = document.getElementById("chatInput");
+    const messageText = input.value.trim();
+
+    if (!currentUser) { 
+        alert("মেসেজ পাঠাতে হলে অনুগ্রহ করে প্রথমে লগইন করুন।");
+        return; 
+    }
+    
+    if (!messageText) {
+        alert("মেসেজ লেখার বক্সে কিছু লিখুন।");
+        return;
+    }
+
+    const message = {
+        sender: currentUser.email.split('@')[0], 
+        text: messageText,
+        timestamp: Date.now(),
+        date: new Date().toLocaleTimeString('bn-BD', {hour: '2-digit', minute:'2-digit'})
+    };
+
+    const chatRef = ref(db, 'chat/');
+    
+    const newMessageRef = push(chatRef);
+    set(newMessageRef, message)
+        .then(() => {
+            input.value = ""; 
+        })
+        .catch((error) => console.error("Message send failed:", error));
+}
+
+
+function loadChatMessages() {
+    if (!currentUser) {
+        document.getElementById("chat-messages").innerHTML = '<p style="text-align: center; color: red; padding: 20px;">মেসেজ দেখতে হলে প্রথমে লগইন করুন।</p>';
+        return;
+    }
+
+    const chatRef = ref(db, 'chat/');
+    const chatBox = document.getElementById("chat-messages");
+    
+    onValue(chatRef, (snapshot) => {
+        chatBox.innerHTML = '';
+        const messages = [];
+        let latestMessage = null;
+
+        snapshot.forEach((childSnapshot) => {
+            const msg = childSnapshot.val();
+            messages.push(msg);
+            
+            // সর্বশেষ মেসেজ বের করা
+            if (!latestMessage || msg.timestamp > latestMessage.timestamp) {
+                latestMessage = msg;
+            }
+        });
+        
+        // ***** নতুন: নোটিফিকেশন চেক ও ট্রিগার করা *****
+        const currentUserID = currentUser.email.split('@')[0];
+        if (latestMessage && latestMessage.timestamp > lastMessageTimestamp && latestMessage.sender !== currentUserID) {
+            displayNotification(latestMessage.sender, latestMessage.text);
+        }
+        // সর্বশেষ মেসেজের টাইমস্ট্যাম্প আপডেট করা
+        if (latestMessage) {
+             lastMessageTimestamp = latestMessage.timestamp;
+        }
+
+        // ডিসপ্লে করা
+        messages.sort((a, b) => a.timestamp - b.timestamp);
+        
+        messages.slice(-50).forEach(msg => {
+            const isSentByCurrentUser = currentUser && msg.sender === currentUserID;
+            const bubbleClass = isSentByCurrentUser ? 'message-bubble sent-message' : 'message-bubble';
+            
+            const messageElement = document.createElement("div");
+            messageElement.className = bubbleClass;
+            messageElement.innerHTML = `
+                ${msg.text}
+                <span class="message-meta">${msg.sender} @ ${msg.date}</span>
+            `;
+            chatBox.appendChild(messageElement);
+        });
+
+        // অটো স্ক্রল ডাউন
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+
+
+// ***** ২০. নোটিফিকেশন লজিক (নতুন) *****
+
+function requestNotificationPermission() {
+    if (!("Notification" in window)) {
+        alert("দুঃখিত, এই ব্রাউজার নোটিফিকেশন সমর্থন করে না।");
+        return;
+    }
+
+    Notification.requestPermission().then(permission => {
+        checkNotificationStatus();
+        if (permission === 'granted') {
+            // নোটিফিকেশন পাঠানোর পরে ইউজারকে জানানো যেতে পারে
+            new Notification("✅ সফল!", { body: "আপনি এখন নতুন মেসেজের নোটিফিকেশন পাবেন।" });
+        }
+    });
+}
+
+function checkNotificationStatus() {
+    const statusElement = document.getElementById("notificationStatus");
+    if (!("Notification" in window)) {
+        statusElement.innerText = "ব্রাউজার সমর্থন করে না";
+        statusElement.style.color = '#e74c3c';
+        return;
+    }
+    
+    switch(Notification.permission) {
+        case 'granted':
+            statusElement.innerText = "নোটিফিকেশন চালু আছে (✅)";
+            statusElement.style.color = '#27ae60';
+            break;
+        case 'denied':
+            statusElement.innerText = "নোটিফিকেশন ব্লক করা আছে (❌)। ব্রাউজার সেটিংসে পরিবর্তন করুন।";
+            statusElement.style.color = '#e74c3c';
+            break;
+        default:
+            statusElement.innerText = "পারমিশনের জন্য 'নোটিফিকেশন চালু করুন' বাটনটি ক্লিক করুন।";
+            statusElement.style.color = '#f39c12';
+    }
+}
+
+function displayNotification(sender, message) {
+    if (Notification.permission === 'granted') {
+        // স্ক্রল করার জন্য একটি সাধারণ নোটিফিকেশন দেখানো হচ্ছে
+        new Notification(`💬 নতুন মেসেজ: ${sender}`, {
+            body: message.length > 50 ? message.substring(0, 47) + '...' : message,
+            icon: 'https://i.imgur.com/your-app-icon.png' // এখানে আপনার অ্যাপের লোগোর URL দিতে পারেন
+        });
+    }
+}

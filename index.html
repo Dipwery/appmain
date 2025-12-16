@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DHRUVA POWER - Advanced Manager</title>
-    
+    <title>DHRUVA POWER - Manager</title>
     <link rel="stylesheet" href="style.css">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
-    
     <script type="module" src="main.js"></script>
-    
 </head>
 <body>
     
     <div id="side-menu">
         <div class="menu-header">
-            <h3 id="menuEmailDisplay"></h3>
+            <h3 id="menuEmailDisplay">User</h3>
             <button class="close-btn" onclick="toggleMenu()">×</button>
         </div>
         
         <div class="menu-items">
-            <button onclick="showSection('dashboard-view'); toggleMenu()">ড্যাশবোর্ড</button>
-            <button onclick="showSection('monthly-report-view'); toggleMenu()">মাসিক রিপোর্ট</button>
-            <button onclick="showSection('history-view'); toggleMenu()">লেনদেন ইতিহাস</button>
-            <button onclick="downloadPDF(); toggleMenu()">PDF ডাউনলোড</button>
+            <button onclick="showSection('dashboard-view'); toggleMenu()">🏠 ড্যাশবোর্ড</button>
+            <button onclick="showSection('monthly-report-view'); toggleMenu()">📅 মাসিক রিপোর্ট</button>
+            <button onclick="showSection('history-view'); toggleMenu()">📜 লেনদেন ইতিহাস</button>
+            
+            <button onclick="showSection('chat-view'); toggleMenu()">💬 যোগাযোগ/চ্যাট</button>
+            
+            <button onclick="showSection('settings-view'); toggleMenu()">⚙️ সেটিংস ও টুলস</button>
+            <button onclick="downloadPDF(); toggleMenu()">⬇️ PDF ডাউনলোড</button>
             
             <div class="separator"></div>
 
@@ -57,100 +57,80 @@
             <h2 id="currentViewTitle">ড্যাশবোর্ড</h2>
 
             <div id="dashboard-view">
-                <div id="settings" class="settings-box">
-                    <h4>দৈনিক বেতন হার (Daily Rate)</h4>
-                    <input type="number" id="dailyRateInput" placeholder="টাকার পরিমাণ">
-                    <button onclick="updateDailyRate()" id="rateSaveBtn">সেভ করুন</button>
-                </div>
                 
                 <div id="finance-section">
-                    <div class="card income">
-                        <h4>মোট আয় (সকল সময়ের)</h4>
-                        <h2 id="totalIncome">৳ 0</h2>
-                    </div>
-                    <div class="card expense">
-                        <h4>মোট তোলা হয়েছে (সকল সময়ের)</h4>
-                        <h2 id="totalWithdraw">৳ 0</h2>
-                    </div>
-                    <div class="card balance">
+                    <div class="card balance-card">
                         <h4>বর্তমান ব্যালেন্স</h4>
                         <h2 id="currentBalance">৳ 0</h2>
                     </div>
+                    <div class="row-cards">
+                        <div class="card income-card">
+                            <h4>মোট আয়</h4>
+                            <h3 id="totalIncome">৳ 0</h3>
+                        </div>
+                        <div class="card expense-card">
+                            <h4>মোট তোলা</h4>
+                            <h3 id="totalWithdraw">৳ 0</h3>
+                        </div>
+                    </div>
                 </div>
 
-                <h6 id="lastDateMsg">শেষ এন্ট্রি: <span id="lastDate">--/--/----</span></h6>
+                <div class="divider"></div>
 
                 <div id="buttons">
-                    <h4>আজকে কি আপনি কাজে গিয়েছেন? (দৈনিক হার: <span id="displayDailyRate">৳ 400</span>)</h4>
-                    <button id="presentBtn" onclick="markAttendance('Present')">হ্যাঁ (উপস্থিত)</button>
-                    <button id="absentBtn" onclick="markAttendance('Absent')">না (অনুপস্থিত)</button>
-                </div>
-
-                <div class="withdraw-box past-data-box">
-                    <h4>📅 অতীত তারিখের ডেটা এন্ট্রি</h4>
-                    <p>অ্যাপ শুরু করার আগের তথ্য সেভ করুন।</p>
-                    <input type="date" id="pastDateInput" style="width: 100%;">
+                    <h6 id="lastDateMsg">শেষ অ্যাকশন: <span id="lastDate">--/--/----</span></h6>
+                    <h4>আজকের উপস্থিতি নিশ্চিত করুন</h4>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">(বর্তমান রেট: <span id="displayDailyRate">৳ 400</span>)</p>
                     
-                    <button onclick="markPastAttendance('Present')">উপস্থিতি দিন</button>
-                    <button onclick="markPastAttendance('Absent')">অনুপস্থিতি দিন</button>
-                </div>
-
-                <div class="withdraw-box">
-                    <h4>টাকা তুলতে চান?</h4>
-                    <input type="number" id="withdrawAmount" placeholder="পরিমাণ (টাকা)">
-                    <input type="text" id="withdrawReason" placeholder="কারণ">
-                    <button onclick="withdrawMoney()" class="w-btn">টাকা তুলুন</button>
+                    <div class="action-btn-group">
+                        <button id="presentBtn" onclick="markAttendance('Present')">✅ উপস্থিত (Present)</button>
+                        <button id="absentBtn" onclick="markAttendance('Absent')">❌ অনুপস্থিত (Absent)</button>
+                    </div>
                 </div>
             </div>
 
             <div id="monthly-report-view" style="display: none;">
                 <div class="monthly-nav">
-                    <button onclick="changeMonth(-1)">← পূর্ববর্তী মাস</button>
-                    <h3 id="currentMonthYear">ডিসেম্বর ২০২৫</h3>
-                    <button onclick="changeMonth(1)">পরবর্তী মাস →</button>
+                    <button onclick="changeMonth(-1)">❮</button>
+                    <h3 id="currentMonthYear">মাস বছর</h3>
+                    <button onclick="changeMonth(1)">❯</button>
                 </div>
                 
                 <div id="day">
-                    <div class="stat-box">
-                        <h4>মাসিক উপস্থিতি</h4>
-                        <h2 id="monthlyPresent">00</h2>
+                    <div class="stat-box present-box">
+                        <h4>উপস্থিত</h4>
+                        <h2 id="monthlyPresent">0</h2>
                     </div>
-                    <div class="stat-box">
-                        <h4>মাসিক অনুপস্থিতি</h4>
-                        <h2 id="monthlyAbsent">00</h2>
+                    <div class="stat-box absent-box">
+                        <h4>অনুপস্থিত</h4>
+                        <h2 id="monthlyAbsent">0</h2>
                     </div>
-                    <div class="stat-box">
-                        <h4>মোট মাসিক আয়</h4>
+                    <div class="stat-box money-box">
+                        <h4>মোট আয়</h4>
                         <h2 id="monthlyIncome">৳ 0</h2>
                     </div>
                 </div>
 
-                <h3>উপস্থিতির ক্যালেন্ডার</h3>
+                <h3>ক্যালেন্ডার ভিউ</h3>
                 <div class="calendar-grid-wrapper">
-                    <div class="calendar-grid">
-                        <div class="calendar-header">রবি</div>
-                        <div class="calendar-header">সোম</div>
-                        <div class="calendar-header">মঙ্গল</div>
-                        <div class="calendar-header">বুধ</div>
-                        <div class="calendar-header">বৃহঃ</div>
-                        <div class="calendar-header">শুক্র</div>
-                        <div class="calendar-header">শনি</div>
+                    <div class="calendar-grid header-grid">
+                        <div>রবি</div><div>সোম</div><div>মঙ্গল</div><div>বুধ</div><div>বৃহঃ</div><div>শুক্র</div><div>শনি</div>
                     </div>
-                    <div id="calendarDays" class="calendar-grid">
-                        </div>
+                    <div id="calendarDays" class="calendar-grid"></div>
                 </div>
             </div>
 
             <div id="history-view" style="display: none;">
-                <h3>লেনদেন বিবরণী (Statement)</h3>
-                <p>এই তালিকাটি কেবল নির্বাচিত মাসের লেনদেন দেখাচ্ছে।</p>
+                <div class="section-header">
+                    <h3>লেনদেন বিবরণী</h3>
+                    <span style="font-size: 12px; color: #666;">(বর্তমান মাস)</span>
+                </div>
                 <div id="statement-area">
                     <table id="historyTable">
                         <thead>
                             <tr>
                                 <th>তারিখ</th>
                                 <th>বিবরণ</th>
-                                <th>অবস্থা</th>
                                 <th>টাকা</th>
                                 <th>ব্যালেন্স</th>
                             </tr>
@@ -159,6 +139,76 @@
                     </table>
                 </div>
             </div>
+
+            <div id="chat-view" style="display: none;">
+                <div class="section-header">
+                    <h3>💬 যোগাযোগ/চ্যাট</h3>
+                    <span style="font-size: 12px; color: #666;">(গুরুত্বপূর্ণ যোগাযোগ)</span>
+                </div>
+                
+                <div style="margin-bottom: 15px; text-align: center;">
+                    <button onclick="requestNotificationPermission()" class="btn-primary" style="background-color: #f39c12; width: auto; padding: 10px 15px; border-radius: 8px;">নোটিফিকেশন চালু করুন</button>
+                    <p id="notificationStatus" style="font-size: 12px; color: #7f8c8d; margin-top: 5px;"></p>
+                </div>
+
+                <div id="chat-messages">
+                    </div>
+
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="আপনার মেসেজ লিখুন..." onkeypress="if(event.keyCode == 13) sendMessage()">
+                    <button onclick="sendMessage()" id="sendMsgBtn">✉️ পাঠান</button>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
+                    <h4>সরাসরি যোগাযোগ:</h4>
+                    <a href="tel:+8801700000000" class="btn-primary" style="background-color: #2ecc71; text-decoration: none; display: block; width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px;">
+                        📞 অফিস/ম্যানেজারকে কল করুন
+                    </a>
+                    <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">কল করতে বাটনটি প্রেস করুন।</p>
+                </div>
+            </div>
+            <div id="settings-view" style="display: none;">
+                
+                <div class="settings-card withdraw-card-style">
+                    <div class="card-header">
+                        <h3>💸 টাকা উত্তোলন (Withdraw)</h3>
+                    </div>
+                    <div class="card-body">
+                        <input type="number" id="withdrawAmount" placeholder="পরিমাণ (টাকা)">
+                        <input type="text" id="withdrawReason" placeholder="কারণ (যেমন: খরচ, ব্যক্তিগত)">
+                        <button onclick="withdrawMoney()" class="w-btn">টাকা তুলুন</button>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3>📅 অতীত তারিখের এন্ট্রি</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size: 13px; color: #666; margin-bottom: 8px;">ভুলবশত কোনো দিন বাদ পড়লে এখান থেকে ঠিক করুন।</p>
+                        <input type="date" id="pastDateInput" style="width: 100%;">
+                        <div class="btn-row">
+                            <button onclick="markPastAttendance('Present')" class="btn-outline-success">উপস্থিত</button>
+                            <button onclick="markPastAttendance('Absent')" class="btn-outline-danger">অনুপস্থিত</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="card-header">
+                        <h3>⚙️ বেতন কনফিগারেশন</h3>
+                    </div>
+                    <div class="card-body input-group">
+                        <label>দৈনিক রেট (টাকা):</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="dailyRateInput" placeholder="400">
+                            <button onclick="updateDailyRate()" id="rateSaveBtn">সেভ</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
         </div>
     </div>
     
